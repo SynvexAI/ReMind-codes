@@ -1,0 +1,88 @@
+<!-- Создай простую 2D-сцену: белый фон, синий шар диаметром 40 пикселей. Шар движется с постоянной скоростью и отскакивает от границ окна по законам отражения. Без гравитации, без трения. Размер сцены — 800x600 пикселей. При столкновении с границей угол отражения равен углу падения. Отскоки реалистичные, шар не залипает в углах. -->
+ 
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Быстрый шар</title>
+<style>
+  body{margin:0;display:flex;justify-content:center;align-items:center;height:100vh;background:#f0f0f0;}
+  canvas{background:white;border:1px solid #ccc;}
+</style>
+</head>
+<body>
+
+<canvas id="scene" width="800" height="600"></canvas>
+
+<script>
+const canvas = document.getElementById('scene');
+const ctx    = canvas.getContext('2d');
+
+const RADIUS   = 20;            // радиус шара (диаметр = 40 px)
+const SPEED    = 250;           // скорость в px/с
+let posX, posY;                // координаты центра шара
+let velX, velY;                // компоненты скорости
+
+/* -------------------------------------------------------------
+   Инициализация: случайная позиция внутри окна,
+   случайное направление движения (вектор unit → *SPEED)
+   ------------------------------------------------------------- */
+function init() {
+  posX = Math.random() * (canvas.width - 2*RADIUS) + RADIUS;
+  posY = Math.random() * (canvas.height - 2*RADIUS) + RADIUS;
+
+  const a = Math.random()*2*Math.PI;        // произвольный угол
+  velX = Math.cos(a) * SPEED;
+  velY = Math.sin(a) * SPEED;
+}
+init();
+
+/* -------------------------------------------------------------
+   Основной цикл отрисовки
+   ------------------------------------------------------------- */
+let lastTime = null;
+
+function loop(now){
+  if (!lastTime){ lastTime=now; requestAnimationFrame(loop); return; }
+  const dt = (now - lastTime)/1000;         // прошедшее время в секундах
+  lastTime = now;
+
+  /* ---------- перемещение шара -------------------------------- */
+  posX += velX * dt;
+  posY += velY * dt;
+
+  /* ---------- отскок от вертикальных стенок ----------------- */
+  if (posX - RADIUS <= 0 && velX < 0){
+    velX = Math.abs(velX);                  // отражаем по оси X
+    posX = RADIUS;                          // «приклеиваем» к границе
+  }
+  if (posX + RADIUS >= canvas.width && velX > 0){
+    velX = -Math.abs(velX);
+    posX = canvas.width - RADIUS;
+  }
+
+  /* ---------- отскок от горизонтальных стенок -------------- */
+  if (posY - RADIUS <= 0 && velY < 0){
+    velY = Math.abs(velY);                  // отражаем по оси Y
+    posY = RADIUS;
+  }
+  if (posY + RADIUS >= canvas.height && velY > 0){
+    velY = -Math.abs(velY);
+    posY = canvas.height - RADIUS;
+  }
+
+  /* ---------- отрисовка ------------------------------------- */
+  ctx.clearRect(0,0,canvas.width,canvas.height);   // чистим фон
+
+  ctx.fillStyle = 'blue';
+  ctx.beginPath();
+  ctx.arc(posX, posY, RADIUS, 0, Math.PI*2);
+  ctx.fill();
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
