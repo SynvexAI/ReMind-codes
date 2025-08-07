@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>[Ваше имя] — [Роль/должность]</title>
+  <meta name="description" content="[Короткое описание: кто вы и чем поможете клиенту]" />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://example.com/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="[Ваше имя] — [Роль]" />
+  <meta property="og:description" content="[Короткое описание]" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://example.com/" />
+  <meta property="og:image" content="https://placehold.co/1200x630/png?text=[Ваше+имя]" />
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #1f6feb;
+      --accent: #f59e0b;
+      --card: #f5f7fb;
+      --border: #e5e7eb;
+      --shadow: 0 10px 30px rgba(2, 6, 23, 0.06);
+      --radius: 14px;
+    }
+    [data-theme="dark"] {
+      --bg: #0b1020;
+      --text: #e5e7eb;
+      --muted: #9aa0ae;
+      --primary: #66a3ff;
+      --accent: #f59e0b;
+      --card: #12172a;
+      --border: #20263b;
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin:0; padding:0; }
+    body {
+      font: 16px/1.6 Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Noto Sans", "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      scroll-behavior: smooth;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; height: auto; display: block; }
+    .container { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+    /* Header */
+    header {
+      position: sticky; top: 0; z-index: 50;
+      background: color-mix(in oklab, var(--bg) 88%, transparent);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .brand { font-weight: 700; letter-spacing: .3px; }
+    .brand span {
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .menu { display: flex; gap: 20px; align-items: center; }
+    .menu a { color: var(--muted); font-weight: 500; }
+    .menu a:hover { color: var(--text); }
+    .actions { display: flex; align-items: center; gap: 10px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); transition: .2s ease;
+    }
+    .btn.primary { background: var(--primary); color: #fff; border-color: transparent; }
+    .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+    .icon { width: 18px; height: 18px; display: inline-block; }
+
+    /* Burger for mobile */
+    .burger { display: none; border: 1px solid var(--border); background: var(--bg); border-radius: 10px; padding: 8px 10px; }
+    .burger span { display: block; width: 22px; height: 2px; background: var(--text); margin: 4px 0; }
+
+    /* Hero */
+    .hero {
+      padding: 64px 0 48px;
+    }
+    .hero-inner {
+      display: grid; grid-template-columns: 1.3fr 1fr; gap: 32px; align-items: center;
+      border: 1px solid var(--border); background: var(--card); border-radius: var(--radius);
+      padding: 32px; box-shadow: var(--shadow);
+    }
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1.15;
+      letter-spacing: 0.2px;
+    }
+    .hero h1 .grad {
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    .subtitle { color: var(--muted); font-size: 18px; margin-bottom: 16px; }
+    .hero-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .avatar {
+      width: 100%; aspect-ratio: 1/1; border-radius: 18px; overflow: hidden;
+      border: 1px solid var(--border);
+      background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 12%, transparent), color-mix(in oklab, var(--accent) 12%, transparent));
+    }
+
+    /* Sections */
+    section { padding: 56px 0; }
+    .section-title { font-size: 26px; margin: 0 0 10px; }
+    .section-sub { color: var(--muted); margin-bottom: 24px; }
+
+    /* About */
+    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .card {
+      border: 1px solid var(--border); background: var(--card);
+      border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow);
+    }
+    .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .tag {
+      font-size: 13px; color: var(--muted);
+      border: 1px solid var(--border); padding: 6px 10px; border-radius: 999px;
+      background: color-mix(in oklab, var(--bg) 80%, transparent);
+    }
+
+    /* Services */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+    /* Portfolio */
+    .projects { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .project {
+      border: 1px solid var(--border); border-radius: 14px; overflow: hidden; background: var(--bg);
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .project:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .project img { aspect-ratio: 16/10; object-fit: cover; }
+    .project .p-body { padding: 14px; }
+    .project .p-title { font-weight: 600; margin: 0 0 6px; }
+    .project .p-meta { color: var(--muted); font-size: 14px; }
+
+    /* Contact */
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .field { display: grid; gap: 8px; margin-bottom: 12px; }
+    label { font-weight: 600; font-size: 14px; }
+    input, textarea {
+      padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text); outline: none;
+    }
+    input:focus, textarea:focus { border-color: color-mix(in oklab, var(--primary) 40%, var(--border)); box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 20%, transparent); }
+    textarea { min-height: 120px; resize: vertical; }
+
+    /* Footer */
+    footer { border-top: 1px solid var(--border); padding: 22px 0; color: var(--muted); }
+    .social { display: flex; gap: 10px; align-items: center; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .about-grid, .grid-3, .projects, .contact-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .menu { display: none; position: absolute; top: 64px; left: 0; right: 0; background: var(--bg); border-bottom: 1px solid var(--border); padding: 10px 20px; }
+      .menu.open { display: grid; gap: 8px; }
+      .burger { display: inline-block; }
+    }
+
+    /* Accessibility */
+    :focus-visible { outline: 3px solid color-mix(in oklab, var(--primary) 30%, transparent); outline-offset: 3px; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <div class="brand"><a href="#top">[Ваше имя] <span>• [Роль]</span></a></div>
+
+      <nav id="nav" class="menu">
+        <a href="#about">Обо мне</a>
+        <a href="#services">Услуги</a>
+        <a href="#portfolio">Портфолио</a>
+        <a href="#contact">Контакты</a>
+      </nav>
+
+      <div class="actions">
+        <button id="themeToggle" class="btn" aria-label="Переключить тему">
+          <svg class="icon" viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 1 0 9 9c0-.34-.02-.67-.07-1A7 7 0 0 1 12 3Z" stroke="currentColor" stroke-width="1.6"/></svg>
+          Тема
+        </button>
+        <a class="btn primary" href="mailto:[email@example.com]">Написать</a>
+        <button id="burger" class="burger" aria-label="Открыть меню"><span></span><span></span><span></span></button>
+      </div>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-inner">
+          <div>
+            <h1>Привет! Я <span class="grad">[Ваше имя]</span> — [роль/должность]</h1>
+            <p class="subtitle">[2–3 предложения: чем занимаетесь, кому помогаете, ваш фокус/ниша.]</p>
+            <div class="hero-cta">
+              <a class="btn primary" href="[ссылка_на_CV_или_портфолио]" target="_blank" rel="noopener">Скачать CV</a>
+              <a class="btn" href="#contact">Связаться</a>
+            </div>
+          </div>
+          <div class="avatar">
+            <img src="https://placehold.co/800x800/png?text=%D0%92%D0%B0%D1%88%D0%B5+%D1%84%D0%BE%D1%82%D0%BE" alt="Ваше фото" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- About -->
+    <section id="about">
+      <div class="container">
+        <h2 class="section-title">Обо мне</h2>
+        <p class="section-sub">Коротко о вас, опыте и сильных сторонах.</p>
+
+        <div class="about-grid">
+          <div class="card">
+            <h3>Чем могу помочь</h3>
+            <p>[2–4 предложения о вашей ценности и подходе к работе.]</p>
+            <div class="tags">
+              <span class="tag">[Навык 1]</span>
+              <span class="tag">[Навык 2]</span>
+              <span class="tag">[Навык 3]</span>
+              <span class="tag">[Навык 4]</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Факты и цифры</h3>
+            <ul>
+              <li><strong>[N]+</strong> лет опыта</li>
+              <li><strong>[N]+</strong> завершённых проектов</li>
+              <li>Работаю с: [отрасли/ниши]</li>
+              <li>Город: [город] / работаю удалённо</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Services -->
+    <section id="services">
+      <div class="container">
+        <h2 class="section-title">Услуги</h2>
+        <p class="section-sub">Что именно вы делаете.</p>
+
+        <div class="grid-3">
+          <div class="card">
+            <h3>Услуга 1</h3>
+            <p>Короткое описание ценности и результата.</p>
+          </div>
+          <div class="card">
+            <h3>Услуга 2</h3>
+            <p>Короткое описание ценности и результата.</p>
+          </div>
+          <div class="card">
+            <h3>Услуга 3</h3>
+            <p>Короткое описание ценности и результата.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Portfolio -->
+    <section id="portfolio">
+      <div class="container">
+        <h2 class="section-title">Портфолио</h2>
+        <p class="section-sub">Пара работ, которыми вы гордитесь.</p>
+
+        <div class="projects">
+          <a class="project" href="[ссылка_на_проект_1]" target="_blank" rel="noopener">
+            <img src="https://picsum.photos/seed/p1/800/500" alt="Проект 1" />
+            <div class="p-body">
+              <div class="p-title">Проект 1</div>
+              <div class="p-meta">[Стек/результат]</div>
+            </div>
+          </a>
+          <a class="project" href="[ссылка_на_проект_2]" target="_blank" rel="noopener">
+            <img src="https://picsum.photos/seed/p2/800/500" alt="Проект 2" />
+            <div class="p-body">
+              <div class="p-title">Проект 2</div>
+              <div class="p-meta">[Стек/результат]</div>
+            </div>
+          </a>
+          <a class="project" href="[ссылка_на_проект_3]" target="_blank" rel="noopener">
+            <img src="https://picsum.photos/seed/p3/800/500" alt="Проект 3" />
+            <div class="p-body">
+              <div class="p-title">Проект 3</div>
+              <div class="p-meta">[Стек/результат]</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact -->
+    <section id="contact">
+      <div class="container">
+        <h2 class="section-title">Контакты</h2>
+        <p class="section-sub">Заполните форму — отвечу в течение дня.</p>
+
+        <div class="contact-grid">
+          <div class="card">
+            <form id="contactForm">
+              <div class="field">
+                <label for="name">Имя</label>
+                <input id="name" name="name" type="text" placeholder="Как к вам обращаться?" required />
+              </div>
+              <div class="field">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" placeholder="name@example.com" required />
+              </div>
+              <div class="field">
+                <label for="message">Сообщение</label>
+                <textarea id="message" name="message" placeholder="Коротко опишите задачу..." required></textarea>
+              </div>
+              <button class="btn primary" type="submit">Отправить</button>
+              <!-- Хотите настоящую форму? Замените mailto на Formspree/Netlify (см. JS внизу). -->
+            </form>
+          </div>
+          <div class="card">
+            <h3>Связаться напрямую</h3>
+            <p>Email: <a href="mailto:[email@example.com]">[email@example.com]</a></p>
+            <p>Телефон: <a href="tel:[+7XXXXXXXXXX]">[+7&nbsp;XXX&nbsp;XXX‑XX‑XX]</a></p>
+            <p>Город: [Город]</p>
+            <div class="social" aria-label="Соцсети">
+              <a class="btn" href="[https://t.me/username]" target="_blank" rel="noopener">Telegram</a>
+              <a class="btn" href="[https://linkedin.com/in/username]" target="_blank" rel="noopener">LinkedIn</a>
+              <a class="btn" href="[https://github.com/username]" target="_blank" rel="noopener">GitHub</a>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+      <div>© <span id="year"></span> [Ваше имя]. Все права защищены.</div>
+      <div><a href="#top">Наверх ↑</a></div>
+    </div>
+  </footer>
+
+  <!-- Schema.org Person (заполните поля) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": "[Ваше имя]",
+    "jobTitle": "[Роль/должность]",
+    "email": "mailto:[email@example.com]",
+    "telephone": "[+7XXXXXXXXXX]",
+    "url": "https://example.com/",
+    "image": "https://placehold.co/800x800/png?text=%D0%92%D0%B0%D1%88%D0%B5+%D1%84%D0%BE%D1%82%D0%BE",
+    "sameAs": [
+      "[https://t.me/username]",
+      "[https://linkedin.com/in/username]",
+      "[https://github.com/username]"
+    ],
+    "address": { "@type": "PostalAddress", "addressLocality": "[Город]", "addressCountry": "RU" }
+  }
+  </script>
+
+  <script>
+    // Год в футере
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    // Тема (светлая/тёмная) с сохранением
+    const root = document.documentElement;
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme) root.setAttribute('data-theme', storedTheme);
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      root.setAttribute('data-theme', next);
+      localStorage.setItem('theme', next);
+    });
+
+    // Мобильное меню
+    const burger = document.getElementById('burger');
+    const nav = document.getElementById('nav');
+    burger.addEventListener('click', () => nav.classList.toggle('open'));
+    nav.querySelectorAll('a').forEach(a => a.addEventListener('click', () => nav.classList.remove('open')));
+
+    // Форма: mailto по умолчанию (откроется почтовый клиент)
+    const form = document.getElementById('contactForm');
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const message = document.getElementById('message').value.trim();
+      const to = '[email@example.com]'; // <-- замените на ваш email
+      const subject = encodeURIComponent('Сообщение с сайта — ' + name);
+      const body = encodeURIComponent(`Имя: ${name}\nEmail: ${email}\n\n${message}`);
+      window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+    });
+
+    /* Хотите отправку без mailto?
+       1) Formspree: создайте форму, получите ID и раскомментируйте:
+          form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = { name: name.value, email: email.value, message: message.value };
+            const res = await fetch('https://formspree.io/f/XXXXYYYY', { method:'POST', headers:{'Accept':'application/json'}, body: new FormData(form) });
+            if (res.ok) { alert('Спасибо! Сообщение отправлено.'); form.reset(); } else { alert('Ошибка отправки, попробуйте позже.'); }
+          });
+       2) Netlify: добавьте атрибуты к <form id="contactForm" name="contact" netlify> и скрытое поле <input type="hidden" name="form-name" value="contact">.
+    */
+  </script>
+</body>
+</html>
