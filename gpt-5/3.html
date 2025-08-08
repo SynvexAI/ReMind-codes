@@ -1,0 +1,669 @@
+<!--Напиши аналог видеоплеера, типа как в YouTube. Создай регулировку громкости, кнопку на весь экран, субтитры, паузу, ускорение. Используй html, css, js-->
+<!--Улучши его. Сделай лучше и в целом идеальным-->
+
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Полнофункциональный кастомный видеоплеер</title>
+<style>
+  :root{
+    --bg:#0b1220;
+    --card:#0f1720;
+    --muted:#9aa4ad;
+    --accent:#ff5c5c;
+    --accent-2:#1fb6ff;
+    --glass: rgba(255,255,255,0.03);
+    --radius:12px;
+    --control-h:52px;
+    --transition:200ms cubic-bezier(.2,.9,.3,1);
+  }
+  /* Light theme via data-theme attr */
+  :root[data-theme="light"]{
+    --bg:#f5f7fa;
+    --card:#ffffff;
+    --muted:#506070;
+    --accent:#e23b3b;
+    --accent-2:#0078d4;
+    --glass: rgba(0,0,0,0.04);
+  }
+
+  *{box-sizing:border-box;font-family:Inter,Segoe UI,Arial,Helvetica,sans-serif}
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),#061022 80%);color:#e6eef6}
+  .wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+
+  .player {
+    width: min(1100px, 96vw);
+    max-width:1200px;
+    background:linear-gradient(180deg,var(--card),rgba(0,0,0,0.02));
+    border-radius:18px;
+    overflow:hidden;
+    box-shadow: 0 18px 50px rgba(2,6,12,0.6);
+    position:relative;
+  }
+
+  /* Video area */
+  .video-area{position:relative;background:#000;user-select:none}
+  video{display:block;width:100%;height:auto;background:#000;outline:none}
+  .topbar{
+    position:absolute;left:0;right:0;top:0;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;
+    gap:12px;background:linear-gradient(180deg, rgba(0,0,0,0.28), rgba(0,0,0,0));
+    color:var(--muted);font-size:13px;
+  }
+
+  .title{font-weight:600;color:inherit;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%}
+
+  /* captions custom */
+  .captions {
+    position:absolute;left:6%;right:6%;bottom:86px;text-align:center;
+    color:#fff;text-shadow:0 6px 20px rgba(0,0,0,0.9);
+    font-size:18px;padding:10px 14px;border-radius:8px;pointer-events:none;line-height:1.2;
+    display:none;background:linear-gradient(180deg,rgba(0,0,0,0.08), rgba(0,0,0,0.25));
+    max-width:88%;backdrop-filter: blur(2px);
+  }
+
+  /* Controls panel */
+  .controls {
+    display:flex;flex-direction:column;gap:10px;padding:12px;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,0.38));
+    position:absolute;left:0;right:0;bottom:0;transition:opacity var(--transition);
+  }
+
+  .progress-wrap{position:relative;width:100%;height:14px;padding:6px 12px}
+  .progress {
+    height:6px;border-radius:6px;background:rgba(255,255,255,0.08);position:relative;overflow:hidden;
+  }
+  .progress .buffer{position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));transition:width 200ms linear}
+  .progress .played{position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 4px 14px rgba(0,0,0,0.5);transition:width 120ms linear}
+  .progress input[type=range]{position:absolute;left:0;top:0;width:100%;height:100%;opacity:0;cursor:pointer}
+
+  .seek-tooltip {
+    position:absolute;bottom:28px;padding:6px 8px;border-radius:6px;font-size:12px;background:rgba(0,0,0,0.8);color:#fff;transform:translateX(-50%);pointer-events:none;white-space:nowrap;display:none;
+  }
+
+  .controls-row{display:flex;align-items:center;gap:12px;padding:0 12px}
+  .left, .center, .right {display:flex;align-items:center;gap:10px}
+  .center {flex:1;justify-content:center}
+  .right {justify-content:flex-end}
+
+  button, select, input[type=range]{background:transparent;border:0;color:var(--muted);font:inherit;outline:none}
+  .btn{
+    height:var(--control-h);min-width:44px;padding:8px;border-radius:10px;background:var(--glass);display:grid;place-items:center;color:inherit;cursor:pointer;transition:all var(--transition);
+  }
+  .btn:hover{transform:translateY(-3px)}
+  .big{
+    height:60px;width:60px;border-radius:12px;font-size:18px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.06));
+  }
+
+  .small{height:40px;width:40px;border-radius:8px}
+
+  .vol-wrap{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;background:rgba(255,255,255,0.02)}
+  .vol-wrap input[type=range]{width:110px}
+
+  .time {font-size:13px;color:var(--muted);min-width:110px;text-align:center}
+  .label{font-size:13px;color:var(--muted)}
+
+  /* settings menu */
+  .menu {position:relative}
+  .menu-panel{
+    position:absolute;right:0;bottom:70px;padding:10px;border-radius:10px;background:var(--card);box-shadow:0 8px 30px rgba(3,9,18,0.6);min-width:180px;display:none;flex-direction:column;gap:8px;color:var(--muted)
+  }
+  .menu-panel.show{display:flex}
+  .menu-panel label{font-size:13px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;padding:6px 4px;cursor:pointer}
+
+  /* small responsive tweaks */
+  @media (max-width:720px){
+    .title{max-width:45%}
+    .vol-wrap input[type=range]{width:70px}
+    .time{display:none}
+    .captions{font-size:15px;bottom:96px}
+  }
+
+  /* fullscreen */
+  :fullscreen .player { width:100vw;height:100vh;border-radius:0 }
+  :fullscreen video {object-fit:contain;height:100vh}
+
+  /* subtle fade for controls */
+  .player.hide-controls .controls{opacity:0;pointer-events:none}
+
+  /* file input invis */
+  input[type="file"]{display:none}
+
+  /* small helpers */
+  .accent-text{color:var(--accent)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="player" id="player" data-theme="dark">
+      <div class="video-area" id="videoArea">
+        <div class="topbar">
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn small" id="themeBtn" title="Переключить тему" aria-label="Theme">🌓</button>
+            </div>
+            <div class="title" id="videoTitle">Демо: цветы в природе — можно загрузить своё видео</div>
+          </div>
+
+          <div style="display:flex;gap:8px;align-items:center">
+            <label class="label" title="Загрузить субтитры">
+              <input id="subFile" type="file" accept=".vtt,.srt">
+              🧾 Субтитры
+            </label>
+            <label class="label" title="Загрузить видео">
+              <input id="videoFile" type="file" accept="video/*">
+              📁 Видео
+            </label>
+          </div>
+        </div>
+
+        <video id="video" preload="metadata" tabindex="0" crossorigin="anonymous">
+          <source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">
+          Твой браузер не поддерживает видео.
+        </video>
+
+        <div id="captions" class="captions" aria-live="polite" role="status"></div>
+
+        <div class="controls" id="controls" role="group" aria-label="Video controls">
+          <div class="progress-wrap" id="progressWrap" aria-hidden="false">
+            <div class="seek-tooltip" id="seekTooltip">0:00</div>
+            <div class="progress" id="progress">
+              <div class="buffer" id="bufferBar" style="width:0%"></div>
+              <div class="played" id="playedBar" style="width:0%"></div>
+              <input id="seek" type="range" min="0" max="1000" value="0" aria-label="Прогресс воспроизведения" />
+            </div>
+          </div>
+
+          <div class="controls-row">
+            <div class="left">
+              <button class="btn big" id="playBtn" aria-label="Play/Pause" title="Пробел">▶️</button>
+
+              <div class="vol-wrap" title="Громкость">
+                <button class="btn small" id="muteBtn" aria-label="Mute">🔊</button>
+                <input id="vol" type="range" min="0" max="1" step="0.01" value="1" aria-label="Громкость">
+              </div>
+
+              <div class="time" id="timeDisplay">0:00 / 0:00</div>
+            </div>
+
+            <div class="center">
+              <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn small" id="pipBtn" title="Picture-in-picture" aria-label="Picture-in-picture">⤢</button>
+                <button class="btn small" id="speedBtn" title="Скорость" aria-label="Playback rate">1x</button>
+
+                <div class="menu" id="speedMenuWrapper">
+                  <div class="menu-panel" id="speedMenu" role="menu" aria-hidden="true">
+                    <label><input type="radio" name="rate" value="0.5"> 0.5x</label>
+                    <label><input type="radio" name="rate" value="0.75"> 0.75x</label>
+                    <label><input type="radio" name="rate" value="1" checked> 1x</label>
+                    <label><input type="radio" name="rate" value="1.25"> 1.25x</label>
+                    <label><input type="radio" name="rate" value="1.5"> 1.5x</label>
+                    <label><input type="radio" name="rate" value="2"> 2x</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="right">
+              <button class="btn small" id="ccBtn" title="Субтитры (C)" aria-label="Subtitles">CC</button>
+              <button class="btn small" id="fsBtn" title="Полный экран (F)" aria-label="Fullscreen">⤢</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* Улучшенный JS плеера: buffer, подсказки, srt->vtt parser, PiP, persist settings, keyboard shortcuts */
+(() => {
+  const player = document.getElementById('player');
+  const video = document.getElementById('video');
+  const playBtn = document.getElementById('playBtn');
+  const muteBtn = document.getElementById('muteBtn');
+  const vol = document.getElementById('vol');
+  const seek = document.getElementById('seek');
+  const bufferBar = document.getElementById('bufferBar');
+  const playedBar = document.getElementById('playedBar');
+  const timeDisplay = document.getElementById('timeDisplay');
+  const progressWrap = document.getElementById('progressWrap');
+  const seekTooltip = document.getElementById('seekTooltip');
+  const ccBtn = document.getElementById('ccBtn');
+  const captionsDiv = document.getElementById('captions');
+  const subFile = document.getElementById('subFile');
+  const videoFile = document.getElementById('videoFile');
+  const videoTitle = document.getElementById('videoTitle');
+  const fsBtn = document.getElementById('fsBtn');
+  const pipBtn = document.getElementById('pipBtn');
+  const speedBtn = document.getElementById('speedBtn');
+  const speedMenu = document.getElementById('speedMenu');
+  const speedMenuWrapper = document.getElementById('speedMenuWrapper');
+  const themeBtn = document.getElementById('themeBtn');
+
+  // state
+  let track = null;
+  let captionsOn = true;
+  let lastVolume = 1;
+  let hideTimer = null;
+  const settingsKey = 'customPlayerSettings_v1';
+
+  // load saved settings
+  const saved = (() => {
+    try { return JSON.parse(localStorage.getItem(settingsKey)) || {}; } catch { return {}; }
+  })();
+
+  function saveSettings(){
+    const s = {
+      volume: video.volume,
+      rate: video.playbackRate,
+      captionsOn,
+      theme: player.getAttribute('data-theme') || 'dark'
+    };
+    try { localStorage.setItem(settingsKey, JSON.stringify(s)); } catch(e){ /* ignore */ }
+  }
+
+  // init
+  function init(){
+    // apply saved
+    if (saved.volume !== undefined){ video.volume = saved.volume; }
+    else video.volume = 1;
+    vol.value = video.volume;
+
+    video.playbackRate = saved.rate || 1;
+    speedBtn.textContent = video.playbackRate + 'x';
+
+    captionsOn = saved.captionsOn !== undefined ? saved.captionsOn : true;
+    player.setAttribute('data-theme', saved.theme || 'dark');
+
+    updateMuteIcon();
+    attachListeners();
+    ensureTextTrack();
+    updateBuffer();
+
+    // show controls initially then hide
+    showControlsTemporarily();
+  }
+
+  function ensureTextTrack(){
+    // ensure there's a hidden track we control for styling
+    if (!video.textTracks || video.textTracks.length === 0){
+      track = video.addTextTrack('subtitles', 'auto', 'ru');
+      track.mode = 'hidden';
+    } else {
+      track = video.textTracks[0];
+      track.mode = 'hidden';
+    }
+    track.addEventListener && track.addEventListener('cuechange', renderCues);
+  }
+
+  function attachListeners(){
+    playBtn.addEventListener('click', togglePlay);
+    video.addEventListener('click', togglePlay);
+    video.addEventListener('play', onPlay);
+    video.addEventListener('pause', onPause);
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('progress', updateBuffer);
+    video.addEventListener('loadedmetadata', onLoadedMeta);
+    video.addEventListener('ended', onEnded);
+
+    vol.addEventListener('input', onVolumeChange);
+    muteBtn.addEventListener('click', toggleMute);
+
+    seek.addEventListener('input', onSeekInput);
+    seek.addEventListener('change', onSeekChange);
+
+    // progress hover + tooltip
+    progressWrap.addEventListener('mousemove', onProgressHover);
+    progressWrap.addEventListener('mouseleave', ()=>seekTooltip.style.display = 'none');
+    progressWrap.addEventListener('click', onProgressClick);
+
+    ccBtn.addEventListener('click', toggleCaptions);
+    subFile.addEventListener('change', onSubtitleFile);
+    videoFile.addEventListener('change', onVideoFile);
+
+    fsBtn.addEventListener('click', toggleFullScreen);
+    pipBtn.addEventListener('click', togglePiP);
+
+    speedBtn.addEventListener('click', ()=> speedMenu.classList.toggle('show'));
+    speedMenu.addEventListener('click', (e) => {
+      if (e.target && e.target.name === 'rate'){
+        video.playbackRate = parseFloat(e.target.value);
+        speedBtn.textContent = video.playbackRate + 'x';
+        saveSettings();
+      }
+    });
+
+    document.addEventListener('keydown', onKeyDown);
+
+    // PiP availability
+    if (!document.pictureInPictureEnabled) pipBtn.style.display = 'none';
+
+    // hide controls on idle
+    player.addEventListener('mousemove', showControlsTemporarily);
+    player.addEventListener('mouseleave', () => player.classList.add('hide-controls'));
+    video.addEventListener('mousemove', showControlsTemporarily);
+
+    themeBtn.addEventListener('click', toggleTheme);
+  }
+
+  function toggleTheme(){
+    const cur = player.getAttribute('data-theme') || 'dark';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    player.setAttribute('data-theme', next);
+    saveSettings();
+  }
+
+  function togglePlay(){
+    if (video.paused) video.play().catch(()=>{/* ignore autoplay block */});
+    else video.pause();
+  }
+  function onPlay(){ playBtn.textContent = '⏸'; showControlsTemporarily(); }
+  function onPause(){ playBtn.textContent = '▶️'; showControlsTemporarily(); }
+  function onEnded(){ playBtn.textContent = '↺'; video.currentTime = 0; }
+
+  function onLoadedMeta(){
+    // adjust seek max to duration (we use 0..1000 scale)
+    seek.max = 1000;
+    updateTimeDisplay();
+    updateBuffer();
+    // if the loaded track has cues, render them (e.g. when loading new subtitles)
+    renderCues();
+  }
+
+  function onTimeUpdate(){
+    const pct = (video.currentTime / Math.max(video.duration, 1)) * 100;
+    playedBar.style.width = pct + '%';
+    // update seek slider using same scale
+    seek.value = Math.floor((video.currentTime / Math.max(video.duration, 1)) * 1000);
+    updateTimeDisplay();
+    renderCues(); // keep custom captions updated
+  }
+
+  function updateTimeDisplay(){
+    const cur = formatTime(video.currentTime);
+    const dur = isFinite(video.duration) ? formatTime(video.duration) : '0:00';
+    timeDisplay.textContent = `${cur} / ${dur}`;
+  }
+
+  function onSeekInput(e){
+    // preview while dragging
+    const val = +e.target.value / 1000;
+    const t = val * video.duration;
+    timeDisplay.textContent = `${formatTime(t)} / ${formatTime(video.duration)}`;
+    // update played bar visual
+    playedBar.style.width = (val*100) + '%';
+  }
+  function onSeekChange(e){
+    const val = +e.target.value / 1000;
+    video.currentTime = val * video.duration;
+  }
+
+  function onProgressHover(e){
+    const rect = progressWrap.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const pct = x / rect.width;
+    const t = pct * (video.duration || 0);
+    seekTooltip.style.left = x + 'px';
+    seekTooltip.textContent = formatTime(t);
+    seekTooltip.style.display = 'block';
+  }
+
+  function onProgressClick(e){
+    const rect = progressWrap.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    const pct = x / rect.width;
+    video.currentTime = pct * video.duration;
+  }
+
+  function updateBuffer(){
+    // examine buffered ranges and set bufferBar to the furthest buffered point
+    try {
+      const b = video.buffered;
+      if (b && b.length){
+        const end = b.end(b.length - 1);
+        const pct = (end / Math.max(video.duration, 1)) * 100;
+        bufferBar.style.width = pct + '%';
+      } else {
+        bufferBar.style.width = '0%';
+      }
+    } catch(e){ bufferBar.style.width = '0%'; }
+  }
+
+  function onVolumeChange(e){
+    video.volume = +e.target.value;
+    video.muted = video.volume === 0;
+    lastVolume = video.volume;
+    updateMuteIcon();
+    saveSettings();
+  }
+  function toggleMute(){
+    video.muted = !video.muted;
+    if (video.muted){
+      vol.value = 0;
+    } else {
+      vol.value = lastVolume || 1;
+    }
+    updateMuteIcon();
+    saveSettings();
+  }
+  function updateMuteIcon(){
+    if (video.muted || video.volume === 0) muteBtn.textContent = '🔇';
+    else if (video.volume < 0.5) muteBtn.textContent = '🔈';
+    else muteBtn.textContent = '🔊';
+  }
+
+  function toggleCaptions(){
+    captionsOn = !captionsOn;
+    captionsDiv.style.display = captionsOn ? 'block' : 'none';
+    ccBtn.style.opacity = captionsOn ? '1' : '0.6';
+    saveSettings();
+  }
+
+  function renderCues(){
+    if (!track) return;
+    const cues = track.activeCues;
+    if (cues && cues.length && captionsOn){
+      let text = '';
+      for (let i=0;i<cues.length;i++){
+        text += cues[i].text + (i < cues.length-1 ? '\n' : '');
+      }
+      captionsDiv.textContent = text;
+      captionsDiv.style.display = 'block';
+    } else {
+      captionsDiv.textContent = '';
+      if (!captionsOn) captionsDiv.style.display = 'none';
+      else captionsDiv.style.display = 'none';
+    }
+  }
+
+  function onSubtitleFile(e){
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const name = f.name;
+    const ext = name.split('.').pop().toLowerCase();
+    const reader = new FileReader();
+    reader.onload = () => {
+      const txt = reader.result;
+      if (ext === 'srt') {
+        const vtt = srt2vtt(txt);
+        loadCuesFromVTTText(vtt);
+      } else if (ext === 'vtt') {
+        loadCuesFromVTTText(txt);
+      } else {
+        alert('Поддерживаемые форматы: .srt, .vtt');
+      }
+    };
+    reader.readAsText(f, 'utf-8');
+  }
+
+  function onVideoFile(e){
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    video.pause();
+    video.src = url;
+    videoTitle.textContent = f.name;
+    video.load();
+    video.play().catch(()=>{/* autoplay might be blocked, user can press play */});
+  }
+
+  // SRT parser: convert simple SRT to WebVTT text
+  function srt2vtt(data){
+    // basic conversion: replace comma decimals and add WEBVTT header
+    const v = 'WEBVTT\n\n' + data
+      .replace(/\r+/g, '')
+      .replace(/^\s+|\s+$/g, '')
+      .split('\n')
+      .map(line => line.replace(/(\d+):(\d+):(\d+),(\d+)/g, '$1:$2:$3.$4'))
+      .join('\n');
+    return v;
+  }
+
+  // load cues from VTT text into our textTrack
+  function loadCuesFromVTTText(text){
+    // clear existing cues
+    try {
+      // Remove cues by creating a fresh textTrack
+      const mode = track.mode;
+      // remove old track and add new
+      // some browsers don't allow removing textTracks, so we'll clear cues if possible
+      if (track.cues){
+        // remove cues via track.removeCue (not standardized everywhere) - fallback: create new track
+        try {
+          while (track.cues && track.cues.length) {
+            track.removeCue(track.cues[0]);
+          }
+        } catch(err){}
+      }
+    } catch(e){}
+    // Create parser by adding temporary <track> element and reading its cues if possible
+    const blob = new Blob([text], {type: 'text/vtt'});
+    const url = URL.createObjectURL(blob);
+    const tEl = document.createElement('track');
+    tEl.kind = 'subtitles';
+    tEl.srclang = 'ru';
+    tEl.label = 'User subtitles';
+    tEl.src = url;
+    tEl.addEventListener('load', () => {
+      // attach to first track
+      try {
+        const tt = video.textTracks[video.textTracks.length - 1];
+        // transfer cues into our controlled track (if desired)
+        // but easier: replace track reference
+        track = tt;
+        track.mode = 'hidden';
+        renderCues();
+        URL.revokeObjectURL(url);
+        alert('Субтитры загружены.');
+      } catch(e){
+        console.warn(e);
+        alert('Ошибка при загрузке субтитров.');
+      }
+    });
+    // append and remove (keeps the track)
+    video.appendChild(tEl);
+  }
+
+  // Picture-in-Picture toggle
+  async function togglePiP(){
+    if (!document.pictureInPictureEnabled) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else {
+        await video.requestPictureInPicture();
+      }
+    } catch(err){ console.warn('PiP error', err); }
+  }
+
+  // Fullscreen
+  function toggleFullScreen(){
+    const el = player;
+    if (!document.fullscreenElement) {
+      el.requestFullscreen && el.requestFullscreen();
+    } else {
+      document.exitFullscreen && document.exitFullscreen();
+    }
+  }
+
+  // keyboard shortcuts
+  function onKeyDown(e){
+    if (['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) return;
+    switch (e.key.toLowerCase()){
+      case ' ':
+        e.preventDefault();
+        togglePlay();
+        break;
+      case 'f':
+        toggleFullScreen();
+        break;
+      case 'm':
+        toggleMute();
+        break;
+      case 'c':
+        toggleCaptions();
+        break;
+      case 'arrowright':
+        seekBy(5);
+        break;
+      case 'arrowleft':
+        seekBy(-5);
+        break;
+      case 'arrowup':
+        changeVolume(0.05);
+        break;
+      case 'arrowdown':
+        changeVolume(-0.05);
+        break;
+      case 'p':
+        togglePiP();
+        break;
+      default:
+        // numeric 0-9 jump
+        if (/^[0-9]$/.test(e.key)){
+          const n = parseInt(e.key,10);
+          if (video.duration) video.currentTime = video.duration * (n/10);
+        }
+    }
+  }
+  function seekBy(sec){ video.currentTime = Math.max(0, Math.min(video.duration, video.currentTime + sec)); }
+  function changeVolume(delta){
+    video.volume = Math.max(0, Math.min(1, video.volume + delta));
+    vol.value = video.volume;
+    video.muted = video.volume === 0;
+    updateMuteIcon();
+  }
+
+  // helpers
+  function formatTime(t){
+    if (!isFinite(t) || isNaN(t)) return '0:00';
+    const hours = Math.floor(t / 3600);
+    const mins = Math.floor((t % 3600) / 60);
+    const secs = Math.floor(t % 60);
+    if (hours > 0) return `${hours}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+    return `${mins}:${String(secs).padStart(2,'0')}`;
+  }
+
+  function showControlsTemporarily(){
+    player.classList.remove('hide-controls');
+    if (hideTimer) clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (!video.paused) player.classList.add('hide-controls');
+    }, 3200);
+  }
+
+  // persist on unload
+  window.addEventListener('beforeunload', saveSettings);
+
+  // on page visibility change, stop PiP if needed
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) saveSettings();
+  });
+
+  // initial call
+  init();
+
+})();
+</script>
+</body>
+</html>
