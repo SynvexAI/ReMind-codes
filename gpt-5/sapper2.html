@@ -1,0 +1,190 @@
+<!--Напиши веб версию сапера-->
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Сапер — Веб</title>
+  <style>
+    :root{--bg:#0b1220;--card:#0f1724;--accent:#22c1c3;--muted:#98a0b3}
+    *{box-sizing:border-box}
+    body{font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:linear-gradient(180deg,#071021 0%, #0b1530 100%);color:#e6eef8}
+    .app{width:min(960px,95vw);background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:18px;border-radius:12px;box-shadow:0 8px 30px rgba(2,6,23,0.6)}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    h1{font-size:18px;margin:0}
+    .controls{display:flex;gap:8px;align-items:center}
+    select,input[type=number]{background:transparent;border:1px solid rgba(255,255,255,0.06);color:inherit;padding:6px 8px;border-radius:8px}
+    button{background:var(--accent);border:none;padding:8px 12px;border-radius:8px;color:#052026;font-weight:600;cursor:pointer}
+    .status{display:flex;gap:12px;align-items:center}
+    .board-wrap{margin-top:14px;display:flex;gap:14px}
+    .board{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:12px;border-radius:10px;display:grid;gap:6px}
+    .cell{width:34px;height:34px;display:flex;align-items:center;justify-content:center;background:#0c1624;border-radius:6px;user-select:none;font-weight:700;cursor:pointer;box-shadow:inset 0 -2px 0 rgba(0,0,0,0.4)}
+    .cell.revealed{background:#e9f3ff;color:#07203a;box-shadow:none;cursor:default}
+    .cell.flag{background:#ffefc7;color:#8b4b00}
+    .cell.mine{background:#ffb4b4;color:#700}
+    .controls-bottom{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .info{font-size:14px;color:var(--muted)}
+    .small{font-size:13px;color:var(--muted)}
+    .flexcol{display:flex;flex-direction:column}
+    @media (max-width:640px){.cell{width:30px;height:30px}}
+    /* number colors */
+    .n1{color:#2b6df6}.n2{color:#2bbf6d}.n3{color:#f63b3b}.n4{color:#522ea6}.n5{color:#a12b44}.n6{color:#1e9aa7}.n7{color:#333}.n8{color:#666}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Сапер — Веб</h1>
+      <div class="controls">
+        <label class="small">Сложность
+          <select id="difficulty">
+            <option value="easy">Легко (9×9, 10 мин)</option>
+            <option value="medium">Средне (16×16, 40 мин)</option>
+            <option value="hard">Сложно (16×30, 99 мин)</option>
+            <option value="custom">Своя</option>
+          </select>
+        </label>
+        <div id="customInputs" style="display:none;align-items:center;gap:6px">
+          <input id="w" type="number" min="5" max="60" value="9" style="width:70px"/>×
+          <input id="h" type="number" min="5" max="60" value="9" style="width:70px"/>
+          <input id="m" type="number" min="1" max="500" value="10" style="width:90px"/>
+        </div>
+        <button id="restart">Новая игра</button>
+      </div>
+    </header>
+
+    <div class="status" style="margin-top:10px">
+      <div class="info">💣 <span id="mineCount">0</span></div>
+      <div class="info">⏱ <span id="timer">00:00</span></div>
+      <div class="info">Ходов: <span id="moves">0</span></div>
+      <div style="flex:1"></div>
+      <div class="small">Клик — открыть. Правый клик — флаг. На моб.: переключатель внизу.</div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board" style="grid-template-columns: repeat(9, 34px);"></div>
+      <div style="min-width:160px" class="flexcol">
+        <div style="padding:12px;background:rgba(255,255,255,0.02);border-radius:10px">
+          <div style="font-weight:700">Правила</div>
+          <div class="small" style="margin-top:6px">Откройте все клетки, где нет мин. Число показывает количество мин рядом.</div>
+        </div>
+        <div class="controls-bottom">
+          <button id="toggleFlag">Перейти в режим флага (для моб.)</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;color:var(--muted);font-size:13px">Сделано с ❤️ — простая реализация сапера. Сохраняет базовый геймплей и избегает проигрыша на первом клике.</div>
+  </div>
+
+<script>
+  // --- state ---
+  const boardEl = document.getElementById('board');
+  const mineCountEl = document.getElementById('mineCount');
+  const timerEl = document.getElementById('timer');
+  const movesEl = document.getElementById('moves');
+  const restartBtn = document.getElementById('restart');
+  const difficulty = document.getElementById('difficulty');
+  const customInputs = document.getElementById('customInputs');
+  const wInput = document.getElementById('w');
+  const hInput = document.getElementById('h');
+  const mInput = document.getElementById('m');
+  const toggleFlagBtn = document.getElementById('toggleFlag');
+
+  let W=9,H=9,M=10;
+  let grid=[]; // {mine, revealed, flagged, adj}
+  let started=false; let timerId=null; let seconds=0; let moves=0; let flagMode=false; let cellsCount=0; let firstClick=true; let gameOver=false;
+
+  function setDifficulty(v){
+    if(v==='easy'){W=9;H=9;M=10}
+    else if(v==='medium'){W=16;H=16;M=40}
+    else if(v==='hard'){W=30;H=16;M=99}
+    else{W=parseInt(wInput.value)||9;H=parseInt(hInput.value)||9;M=parseInt(mInput.value)||10}
+  }
+
+  difficulty.addEventListener('change',()=>{
+    if(difficulty.value==='custom') customInputs.style.display='flex'; else customInputs.style.display='none';
+  });
+
+  function initBoard(){
+    setDifficulty(difficulty.value);
+    boardEl.style.gridTemplateColumns = `repeat(${W}, ${Math.max(30, Math.floor(300/W))}px)`;
+    grid = Array(H).fill(null).map(()=>Array(W).fill(null).map(()=>({mine:false,revealed:false,flagged:false,adj:0})))
+    started=false; seconds=0; moves=0; firstClick=true; gameOver=false; flagMode=false;
+    cellsCount = W*H - M;
+    updateHUD(); render(); stopTimer(); timerEl.textContent='00:00';
+  }
+
+  function placeMines(sx,sy){
+    // avoid placing mine on (sx,sy) and neighbors
+    const forbidden = new Set();
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){const y=sy+dy,x=sx+dx; if(y>=0&&y<H&&x>=0&&x<W) forbidden.add(y*W+x)}
+    let placed=0; while(placed<M){
+      const r = Math.floor(Math.random()*W*H);
+      if(forbidden.has(r)) continue;
+      const x = r%W, y = Math.floor(r/W);
+      if(!grid[y][x].mine){grid[y][x].mine=true;placed++}
+    }
+    // compute numbers
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){if(grid[y][x].mine) continue; let sum=0; for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){const ny=y+dy,nx=x+dx; if(ny>=0&&ny<H&&nx>=0&&nx<W && grid[ny][nx].mine) sum++;} grid[y][x].adj=sum}
+  }
+
+  function startTimer(){ if(timerId) return; timerId = setInterval(()=>{seconds++; timerEl.textContent = formatTime(seconds)},1000) }
+  function stopTimer(){ if(timerId){clearInterval(timerId); timerId=null} }
+  function formatTime(s){ const mm = Math.floor(s/60).toString().padStart(2,'0'); const ss = (s%60).toString().padStart(2,'0'); return mm+':'+ss }
+  function updateHUD(){ mineCountEl.textContent = M; movesEl.textContent = moves }
+
+  function render(){
+    boardEl.innerHTML='';
+    for(let y=0;y<H;y++){
+      for(let x=0;x<W;x++){
+        const cell = grid[y][x];
+        const el = document.createElement('div');
+        el.className = 'cell' + (cell.revealed? ' revealed':'') + (cell.flagged? ' flag':'') + (cell.mine && cell.revealed? ' mine':'');
+        el.dataset.x = x; el.dataset.y = y;
+        if(cell.revealed){
+          if(cell.mine) el.textContent='💣';
+          else if(cell.adj>0){ el.textContent = cell.adj; el.classList.add('n'+Math.min(8,cell.adj)) }
+        } else if(cell.flagged){ el.textContent='🚩' }
+        // event handlers
+        el.addEventListener('click', onCellClick);
+        el.addEventListener('contextmenu', onCellRightClick);
+        // mobile: long press
+        let pressTimer=null;
+        el.addEventListener('touchstart', (e)=>{ e.preventDefault(); pressTimer = setTimeout(()=>{ toggleFlag(x,y); render()}, 500) })
+        el.addEventListener('touchend', ()=>{ if(pressTimer) clearTimeout(pressTimer) })
+
+        boardEl.appendChild(el);
+      }
+    }
+  }
+
+  function onCellClick(e){ if(gameOver) return; const x=parseInt(this.dataset.x), y=parseInt(this.dataset.y);
+    if(flagMode){ toggleFlag(x,y); render(); return }
+    if(!started){ started=true; startTimer() }
+    if(firstClick){ placeMines(x,y); firstClick=false }
+    openCell(x,y);
+    render(); checkWin();
+  }
+
+  function onCellRightClick(e){ e.preventDefault(); if(gameOver) return; const x=parseInt(this.dataset.x), y=parseInt(this.dataset.y);
+    toggleFlag(x,y); render(); }
+
+  function toggleFlag(x,y){ const cell = grid[y][x]; if(cell.revealed) return; cell.flagged = !cell.flagged; moves++; updateHUD() }
+
+  function openCell(x,y){ const cell = grid[y][x]; if(cell.revealed || cell.flagged) return; if(cell.mine){ revealAllMines(); cell.revealed=true; gameOver=true; stopTimer(); alert('💥 Вы проиграли!'); return }
+    cell.revealed=true; cellsCount--; moves++; updateHUD(); if(cell.adj===0){ for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){const nx=x+dx, ny=y+dy; if(nx>=0&&nx<W&&ny>=0&&ny<H) openCell(nx,ny)}}
+  }
+
+  function revealAllMines(){ for(let y=0;y<H;y++) for(let x=0;x<W;x++){ if(grid[y][x].mine) grid[y][x].revealed=true }}
+
+  function checkWin(){ if(cellsCount<=0 && !gameOver){ gameOver=true; stopTimer(); render(); setTimeout(()=>alert('🎉 Вы выиграли! Время: '+formatTime(seconds)),50) } }
+
+  restartBtn.addEventListener('click', ()=>{ initBoard(); render(); });
+  toggleFlagBtn.addEventListener('click', ()=>{ flagMode = !flagMode; toggleFlagBtn.textContent = flagMode? 'Режим: флаг (включён)' : 'Перейти в режим флага (для моб.)' })
+
+  // init
+  initBoard(); render();
+</script>
+</body>
+</html>
